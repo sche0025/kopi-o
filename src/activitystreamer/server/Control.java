@@ -96,7 +96,6 @@ public class Control extends Thread {
 						// close connection
 						return true;
 					}
-					
 					// else if invalid message return true
 					//else return false
 					else {
