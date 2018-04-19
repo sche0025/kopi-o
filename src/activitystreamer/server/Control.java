@@ -69,6 +69,10 @@ public class Control extends Thread {
 				// synchronise thread to organise server authentication - due to the lack of server id in JSON object
 				// upon successful connection (i.e. socket accepted), begin server authentication by calling serverAuthentication() method
 				serverAuthentication(outgoingConnection(new Socket(Settings.getRemoteHostname(),Settings.getRemotePort())));
+				// TEST: use to test redirect: remember to comment serverAnnounce, reason being process is synchornised, upon redirect and connection close, server announce will cause an exception
+//				Connection c = outgoingConnection(new Socket(Settings.getRemoteHostname(),Settings.getRemotePort()));
+//				serverAuthentication(c);
+//				testlogin(c);
 				
 			} catch (IOException e) {
 				log.error("failed to make connection to "+Settings.getRemoteHostname()+":"+Settings.getRemotePort()+" :"+e);
@@ -131,18 +135,22 @@ public class Control extends Thread {
 						// do something
 						// if login is successful
 						if (true) {
-							// increase the number of logged in clients first
+							// send LOGIN_SUCCESS
+							// increase the number of logged in clients FIRST
 							con.setLoggedInClient();
 							// check server's client load versus the other connected servers
-							// redirect if server finds any server with at least 2 clients lesser than its own
-							//loadBalancer(connections);
+							if (executeLoadBalance(con)) {
+								// if redirecting client, close connection
+								return true;
+							}
+							return false;
 						}
-						break;
+						return true;
 					case "LOGIN_SUCCESS":
 						// do something
 						break;
 					case "REDIRECT":
-						// check server announce
+						// close connection with server
 						
 						break;
 					case "LOGIN_FAILED":
@@ -157,7 +165,7 @@ public class Control extends Thread {
 					case "SERVER_ANNOUNCE":
 						// check if server announce was received from unauthenticated server
 						if (con.isServerAuthenticated()) {
-							log.info("received a SERVER_ANNOUNCE from " + con.getSocket().getLocalSocketAddress());
+							log.info("received a SERVER_ANNOUNCE from " + con.getSocket().getRemoteSocketAddress());
 							// broadcast received server announce to every servers connected apart from originated server
 							forwardServerAnnounce(con, newMessage);
 							// store it for load balancing
@@ -349,7 +357,7 @@ public class Control extends Thread {
 		JSONObject serverAnnounceMessage = new JSONObject();
 		serverAnnounceMessage.put("command", "SERVER_ANNOUNCE");
 		serverAnnounceMessage.put("id", Settings.getServerId());
-		serverAnnounceMessage.put("load", getClientLoad(allConnections));
+		serverAnnounceMessage.put("load", getClientLoad());
 		serverAnnounceMessage.put("hostname", Settings.getLocalHostname());
 		serverAnnounceMessage.put("port", Settings.getLocalPort());
 		// write message to all connecting servers as JSON object 
@@ -373,10 +381,10 @@ public class Control extends Thread {
 		}
 	}
 	
-	private int getClientLoad(ArrayList<Connection> allConnections) {
+	private int getClientLoad() {
 		int load = 0;
 
-		for(Connection c : allConnections) {
+		for(Connection c : connections) {
 			if (c.isClient()) {
 				load++;
 			}
@@ -384,14 +392,50 @@ public class Control extends Thread {
 		return load;
 	}
 	
-//	private boolean loadBalancer(ArrayList<Connection> allConnections) {
-//		int load = getClientLoad(allConnections);
-//		
-//		for(Connection c : allConnections) {
-//			if (!c.isClient()) {
-//				
-//			}
-//		}
-//	}
+	private boolean executeLoadBalance(Connection c) {
+		for (String serverId : serverLoad.keySet()) {
+			// redirect if server finds any server with at least 2 clients lesser than its own
+			if (getClientLoad() - serverLoad.get(serverId) >= 2) {
+				// send destination server address									
+				redirectClient(c, serverRedirect.get(serverId));
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void redirectClient(Connection c, JSONObject address) {
+		// Marshaling
+		JSONObject redirectMessage = new JSONObject();
+		redirectMessage.put("command", "REDIRECT");
+		redirectMessage.put("hostname", address.get("hostname"));
+		redirectMessage.put("port", address.get("port"));
+		// write message to remote server as JSON object for authentication
+		if (c.writeMsg(redirectMessage.toJSONString())) {
+			log.info("REDIRECT: REDIRECT message sent successfully");
+		} else {
+			log.info("REDIRECT: REDIRECT message sending failed");
+		}
+	}
+	
+	// test methods 
+	
+	@SuppressWarnings("unchecked")
+	private boolean testlogin(Connection outConnection) {
+		log.info("testlogin: port " + Settings.getLocalPort() + " sending LOGIN to remote port " + Settings.getRemotePort());
+		// Marshaling
+		JSONObject authenticate = new JSONObject();
+		authenticate.put("command", "LOGIN");
+		authenticate.put("secret", Settings.getSecret());
+		// write message to remote server as JSON object for authentication
+		if (outConnection.writeMsg(authenticate.toJSONString())) {
+			log.info("AUTHENTICATE: AUTHENTICATE message sent successfully");
+			return true;
+		} else {
+			log.info("AUTHENTICATE: AUTHENTICATE message sending failed");
+			return false;
+		}
+	}
 
 }
