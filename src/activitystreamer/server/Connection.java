@@ -24,8 +24,8 @@ public class Connection extends Thread {
 	private boolean open = false;
 	private Socket socket;
 	private boolean term=false;
-	// added variable
-	private boolean serverAuthenticated = false;
+	// added variable(s)
+	private boolean serverAuthenticated = false; // required for serverAnnounce to check if connecting servers have been authenticated before reading server announce message
 	private boolean loggedInClient = false;
 	
 	Connection(Socket socket) throws IOException{

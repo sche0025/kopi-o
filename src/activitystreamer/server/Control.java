@@ -81,109 +81,117 @@ public class Control extends Thread {
 			JSONParser parser = new JSONParser();
 			JSONObject newMessage = (JSONObject) parser.parse(msg);
 			
-			// get command to process request
-			String command = (String) newMessage.get("command");
-			
-			switch (command) {
-			
-				case "AUTHENTICATE":
-					// retrieve value for secret
-					String secret = (String) newMessage.get("secret");
-					//check secret between 2 connecting servers
-					if (!Settings.getSecret().equals(secret)) {
-						// send AUTHENTICATION_FAIL
-						authenticationFail(con, secret);
-						// close connection
+			// check for invalid message
+			if (!isInvalidMessage(con, newMessage)) {
+
+				// get command to process request
+				String command = (String) newMessage.get("command");
+				
+				switch (command) {
+				
+					case "AUTHENTICATE":
+						// retrieve value for secret
+						String secret = (String) newMessage.get("secret");
+						//check secret between 2 connecting servers
+						if (!Settings.getSecret().equals(secret)) {
+							// send AUTHENTICATION_FAIL
+							authenticationFail(con, secret);
+							// close connection
+							return true;
+						} 
+						// invalid message can be handled in the parent invalid message check before switch/case
+						//else return false
+						else {
+							// reply nothing to connected server
+							// indicate that server has been authenticated
+							con.setServerAuthenticated();
+							// keep connection open
+							log.info("AUTHENTICATE: hosting server port " + Settings.getLocalPort() + ": server authentication success!");
+							return false;
+						}
+					case "INVALID_MESSAGE":
+						String invalidMessageInfo = (String) newMessage.get("info");
+						log.info(invalidMessageInfo);
+						//then do smt, like close connect
+						break;
+					case "AUTHENTICATION_FAIL": // what if authentication fail was sent but not received? server announce will throw error
+						// print info
+						String authenticationFailInfo = (String) newMessage.get("info");
+						log.info(authenticationFailInfo);
+						// close connection with remote server
 						return true;
-					}
-					// else if invalid message return true
-					//else return false
-					else {
-						// reply nothing to connected server
-						// indicate that server has been authenticated
-						con.setServerAuthenticated();
-						// keep connection open
-						log.info("AUTHENTICATE: hosting server port " + Settings.getLocalPort() + ": server authentication success!");
-						return false;
-					}
-				case "INVALID_MESSAGE":
-					String invalidMessageInfo = (String) newMessage.get("info");
-					log.info(invalidMessageInfo);
-					//then do smt, like close connect
-					break;
-				case "AUTHENTICATION_FAIL": // what if authentication fail was sent but not received? server announce will throw error
-					// print info
-					String authenticationFailInfo = (String) newMessage.get("info");
-					log.info(authenticationFailInfo);
-					// close connection with remote server
-					return true;
-				case "LOGIN":
-					// do something
-					// if login is successful
-					if (true) {
-						// increase the number of logged in clients first
-						con.setLoggedInClient();
-						// check server's client load versus the other connected servers
-						// redirect if server finds any server with at least 2 clients lesser than its own
-						//loadBalancer(connections);
-					}
-					break;
-				case "LOGIN_SUCCESS":
-					// do something
-					break;
-				case "REDIRECT":
-					// check server announce
-					break;
-				case "LOGIN_FAILED":
-					// do something
-					break;
-				case "LOGOUT":
-					// do something
-					break;
-				case "ACTIVITY_MESSAGE":
-					// do something
-					break;
-				case "SERVER_ANNOUNCE":
-					// check if server announce was received from unauthenticated server
-					if (con.isServerAuthenticated()) {
-						// broadcast received server announce to every servers connected apart from originated server
-						forwardServerAnnounce(con, newMessage);
-						log.info(newMessage);
-						return false;
-					} else {
+					case "LOGIN":
+						// do something
+						// if login is successful
+						if (true) {
+							// increase the number of logged in clients first
+							con.setLoggedInClient();
+							// check server's client load versus the other connected servers
+							// redirect if server finds any server with at least 2 clients lesser than its own
+							//loadBalancer(connections);
+						}
+						break;
+					case "LOGIN_SUCCESS":
+						// do something
+						break;
+					case "REDIRECT":
+						// check server announce
+						break;
+					case "LOGIN_FAILED":
+						// do something
+						break;
+					case "LOGOUT":
+						// do something
+						break;
+					case "ACTIVITY_MESSAGE":
+						// do something
+						break;
+					case "SERVER_ANNOUNCE":
+						// check if server announce was received from unauthenticated server
+						if (con.isServerAuthenticated()) {
+							// broadcast received server announce to every servers connected apart from originated server
+							forwardServerAnnounce(con, newMessage);
+							log.info(newMessage);
+							return false;
+						} else {
+							// respond with invalid message
+							sendInvalidMessage(con, "the server has not been authenticated");
+						}
+						
+					case "ACTIVITY_BROADCAST":
+						// do something
+						break;
+					case "REGISTER":
+						// do something
+						break;
+					case "REGISTER_FAILED":
+						// do something
+						break;
+					case "REGISTER_SUCCESS":
+						// do something
+						break;
+					case "LOCK_REQUEST":
+						// do something
+						break;
+					case "LOCK_DENIED":
+						// do something
+						break;
+					case "LOCK_ALLOWED":
+						// do something
+						break;	
+						
+					default:
 						// respond with invalid message
-					}
-					
-				case "ACTIVITY_BROADCAST":
-					// do something
-					break;
-				case "REGISTER":
-					// do something
-					break;
-				case "REGISTER_FAILED":
-					// do something
-					break;
-				case "REGISTER_SUCCESS":
-					// do something
-					break;
-				case "LOCK_REQUEST":
-					// do something
-					break;
-				case "LOCK_DENIED":
-					// do something
-					break;
-				case "LOCK_ALLOWED":
-					// do something
-					break;	
-					
-				default:
-					// respond with invalid message
+				}
+			} else {
+				// if invalid message is true close the connection
+				return true;
 			}
-			
-			
+				
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
 		//temporary
 		return false;
 	}
@@ -212,6 +220,10 @@ public class Control extends Thread {
 		log.debug("outgoing connection: "+Settings.socketAddress(s));
 		Connection c = new Connection(s);
 		connections.add(c);
+		// always trust that parent server is authenticated until authentication fails
+		// to include in report, security issues - because the parent server does not return authentication success until you send the next message, server unable to know
+		// ALTERNATIVE: another way is to check next incoming message is not invalid message
+		c.setServerAuthenticated();
 		return c;
 	}
 	
@@ -258,6 +270,30 @@ public class Control extends Thread {
 	}
 	
 	// added methods for project tasks
+	
+	private boolean isInvalidMessage(Connection c, JSONObject message) {
+		// do something to check for message corruption
+		// suggested ways to check, for each command, check that it strictly follows the given JSON format attributes
+		// check username matches authenticated username etc.
+		// return info on what's wrong
+		// if it is invalid, send invalid message response using another method
+		return false;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void sendInvalidMessage(Connection c, String info) {
+		log.info("ACTIVITY: port " + Settings.getLocalPort() + " sending INVALID_MESSAGE to " + c.getSocket().getLocalSocketAddress());
+		// Marshaling
+		JSONObject invalidMessage = new JSONObject();
+		invalidMessage.put("command", "INVALID_MESSAGE");
+		invalidMessage.put("info", info);
+		// send message 
+		if (c.writeMsg(invalidMessage.toJSONString())) {
+			log.info("INVALID_MESSAGE: INVALID_MESSAGE message sent successfully");
+		} else {
+			log.info("INVALID_MESSAGE: INVALID_MESSAGE message sending failed"); // what should we do if the invalid message keeps failing? loop sending and introduce a timeout?
+		}
+	}
 	
 	@SuppressWarnings("unchecked")
 	private boolean serverAuthentication(Connection outConnection) {
