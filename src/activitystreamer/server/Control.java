@@ -3,6 +3,7 @@ package activitystreamer.server;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Hashtable;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -25,6 +26,8 @@ public class Control extends Thread {
 	private static ArrayList<Connection> connections;
 	private static boolean term=false;
 	private static Listener listener;
+	private static Hashtable<String, Integer> serverLoad;
+	private static Hashtable<String, JSONObject> serverRedirect;
 	
 	protected static Control control = null;
 	
@@ -39,6 +42,10 @@ public class Control extends Thread {
 		
 		// initialize the connections array
 		connections = new ArrayList<Connection>();
+		// initialize the serverLoad hashtable to remember connected server's client load for load balancing
+		serverLoad = new Hashtable<String, Integer>();
+		// initialize the serverRedirect hashtable to store ip address and port number to redirect client to
+		serverRedirect = new Hashtable<String, JSONObject>();
 		
 		// start a listener
 		try {
@@ -136,6 +143,7 @@ public class Control extends Thread {
 						break;
 					case "REDIRECT":
 						// check server announce
+						
 						break;
 					case "LOGIN_FAILED":
 						// do something
@@ -149,9 +157,16 @@ public class Control extends Thread {
 					case "SERVER_ANNOUNCE":
 						// check if server announce was received from unauthenticated server
 						if (con.isServerAuthenticated()) {
+							log.info("received a SERVER_ANNOUNCE from " + con.getSocket().getLocalSocketAddress());
 							// broadcast received server announce to every servers connected apart from originated server
 							forwardServerAnnounce(con, newMessage);
-							log.info(newMessage);
+							// store it for load balancing
+							// PROBLEMS to discuss in report: what if server quits or connection close without warning? when do you remove the inserted serverLoad information
+							// assuming that server never crash or quit once started
+							String incomingServerId = (String) newMessage.get("id");
+							int incomingClientLoad = (int) (long) newMessage.get("load");
+							serverLoad.put(incomingServerId, incomingClientLoad);
+							serverRedirect.put(incomingServerId, newMessage);
 							return false;
 						} else {
 							// respond with invalid message
