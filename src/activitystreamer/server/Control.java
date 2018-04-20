@@ -151,8 +151,8 @@ public class Control extends Thread {
 						break;
 					case "REDIRECT":
 						// close connection with server
-						
-						break;
+						// ADD: connect with provided server hostname and port
+						return true;
 					case "LOGIN_FAILED":
 						// do something
 						break;
@@ -185,7 +185,8 @@ public class Control extends Thread {
 						// do something
 						break;
 					case "REGISTER":
-						// do something
+						// when receive command to register
+						// send lock_request to all other servers
 						break;
 					case "REGISTER_FAILED":
 						// do something
@@ -194,7 +195,10 @@ public class Control extends Thread {
 						// do something
 						break;
 					case "LOCK_REQUEST":
-						// do something
+						// call some method to check local storage for username (e.g. checkUsername())
+						// if username is not known send LOCK_allowed and wait
+						
+						
 						break;
 					case "LOCK_DENIED":
 						// do something
@@ -375,7 +379,7 @@ public class Control extends Thread {
 	
 	private void forwardServerAnnounce(Connection origin, JSONObject serverAnnounceMessage) {
 		for (Connection c : connections) {
-			if (!c.equals(origin)) {
+			if (!c.equals(origin) && c.isServerAuthenticated()) {
 				c.writeMsg(serverAnnounceMessage.toJSONString());
 			}
 		}
