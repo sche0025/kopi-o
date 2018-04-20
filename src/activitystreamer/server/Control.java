@@ -1,6 +1,7 @@
 package activitystreamer.server;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -8,6 +9,7 @@ import java.util.Hashtable;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -132,30 +134,45 @@ public class Control extends Thread {
 						// close connection with remote server
 						return true;
 					case "LOGIN":
-						// do something
-						// if login is successful
-						if (true) {
-							// send LOGIN_SUCCESS
-							// increase the number of logged in clients FIRST
-							con.setLoggedInClient();
-							// check server's client load versus the other connected servers
-							if (executeLoadBalance(con)) {
-								// if redirecting client, close connection
+						// retrieve value for username and secret
+						String username = (String) newMessage.get("username");
+						// if username is not "anonymous"
+						if (!username.equals("anonymous")) {
+							String clientSecret = (String) newMessage.get("secret");
+							
+							// if login is successful
+							if (authenticateClient(username, clientSecret)) {
+								// send LOGIN_SUCCESS
+								cilentLoginSuccess(con, username);
+								// check server's client load versus the other connected servers
+								if (executeLoadBalance(con)) {
+									// if redirecting client, close connection
+									return true;
+								}
+								return false;
+							} else {
+								// login failed
+								clientLoginFailed(con);
 								return true;
 							}
+						} 
+						// if username is "anonymous" keep connection open
+						else {
 							return false;
 						}
-						return true;
 					case "LOGIN_SUCCESS":
-						// do something
-						break;
+						String loginSuccessInfo = (String) newMessage.get("info");
+						log.info("LOGIN_SUCCESS: " + loginSuccessInfo);
+						return false;
 					case "REDIRECT":
 						// close connection with server
 						// ADD: connect with provided server hostname and port
 						return true;
 					case "LOGIN_FAILED":
-						// do something
-						break;
+						String loginFailedInfo = (String) newMessage.get("info");
+						log.info("LOGIN_FAILED: " + loginFailedInfo);
+						// close connection to the server
+						return true;
 					case "LOGOUT":
 						// do something
 						break;
@@ -421,6 +438,53 @@ public class Control extends Thread {
 		} else {
 			log.info("REDIRECT: REDIRECT message sending failed");
 		}
+	}
+	
+	private boolean authenticateClient(String username, String secret) {
+		// parser used to convert (unmarshal) a string into a JSONObject
+		JSONParser parser = new JSONParser();
+		
+//		try {
+			// read the local storage of username and secret file and unmarshal the contents
+//			Reader in = new FileReader("out.json");
+//			JSONObject usernameSecretObj = (JSONObject) parser.parse(in);
+//			in.close();
+			
+			// obtain the user properties from the JSONObject
+			// ADD: depends on how local storage was implemented
+//		}
+		
+		return false;
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void cilentLoginSuccess(Connection c, String username) {
+		// increase number of clients logged in on server
+		c.setLoggedInClient();
+		// Marshaling
+		JSONObject loginSuccessMessage = new JSONObject();
+		loginSuccessMessage.put("command", "LOGIN_SUCCESS");
+		loginSuccessMessage.put("info", "logged in as user " + username);
+		// write message to remote server as JSON object for authentication
+		if (c.writeMsg(loginSuccessMessage.toJSONString())) {
+			log.info("LOGIN_SUCCESS: LOGIN_SUCCESS message sent successfully");
+		} else {
+			log.info("LOGIN_SUCCESS: LOGIN_SUCCESS message sending failed");
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void clientLoginFailed(Connection c) {
+		// Marshaling
+		JSONObject loginFailedMessage = new JSONObject();
+		loginFailedMessage.put("command", "LOGIN_FAILED");
+		loginFailedMessage.put("info", "attempt to login with wrong secret");
+		// write message to remote server as JSON object for authentication
+		if (c.writeMsg(loginFailedMessage.toJSONString())) {
+			log.info("LOGIN_FAILED: LOGIN_FAILED message sent successfully");
+		} else {
+			log.info("LOGIN_FAILED: LOGIN_FAILED message sending failed");
+		}		
 	}
 	
 	// test methods 
