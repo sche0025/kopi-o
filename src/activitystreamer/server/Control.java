@@ -164,7 +164,9 @@ public class Control extends Thread {
 							return false;
 						}
 					case "LOGIN_SUCCESS":
-						// update Settings username and secret
+						// set username and secret
+						// Settings.setUsername(con.getClientUserName());
+						// Settings.setSecret(con.getClientSecret());
 						String loginSuccessInfo = (String) newMessage.get("info");
 						log.info("LOGIN_SUCCESS: " + loginSuccessInfo);
 						return false;
