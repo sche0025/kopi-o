@@ -1,0 +1,6 @@
+-lp 3781 -rh localhost -rp 3780 -s 12345
+
+{
+"command" : "ACTIVITY_BROADCAST",
+"activity" : {"info":"test" }
+}

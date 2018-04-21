@@ -94,7 +94,7 @@ public class Control extends Thread {
 			JSONParser parser = new JSONParser();
 			JSONObject newMessage = (JSONObject) parser.parse(msg);
 			
-			// check for invalid message
+			//all own-check for invalid message
 			if (!isInvalidMessage(con, newMessage)) {
 
 				// get command to process request
@@ -118,11 +118,13 @@ public class Control extends Thread {
 							// reply nothing to connected server
 							// indicate that server has been authenticated
 							con.setServerAuthenticated();
+					        
 							// keep connection open
 							log.info("AUTHENTICATE: hosting server port " + Settings.getLocalPort() + ": server authentication success!");
 							return false;
 						}
-					case "INVALID_MESSAGE":
+						
+					case "INVALID_MESSAGE": 
 						String invalidMessageInfo = (String) newMessage.get("info");
 						log.info(invalidMessageInfo);
 						//then do smt, like close connect
@@ -212,6 +214,9 @@ public class Control extends Thread {
 						// do something
 						break;
 					case "LOCK_REQUEST":
+						JSONObject serverAnnounceMessage = new JSONObject();
+						//serverAnnounceMessage.put("command", "LOCK_REQUEST");
+						
 						// call some method to check local storage for username (e.g. checkUsername())
 						// if username is not known send LOCK_allowed and wait
 						
