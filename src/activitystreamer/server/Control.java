@@ -30,6 +30,7 @@ public class Control extends Thread {
 	private static Listener listener;
 	private static Hashtable<String, Integer> serverLoad;
 	private static Hashtable<String, JSONObject> serverRedirect;
+	private static ArrayList<String> responses;
 	
 	protected static Control control = null;
 	
@@ -206,6 +207,19 @@ public class Control extends Thread {
 					case "REGISTER":
 						// when receive command to register
 						// send lock_request to all other servers
+						
+						
+						String username = (String) newMessage.get("username");
+						String userSecret = (String) newMessage.get("secret");
+						
+						JSONObject lockRequest = new JSONObject();
+						lockRequest.put("command", "LOCK_REQUEST");
+						lockRequest.put("username", username);
+						lockRequest.put("secret", userSecret);
+						
+						System.out.println(username);
+						
+						
 						break;
 					case "REGISTER_FAILED":
 						// do something
@@ -219,8 +233,6 @@ public class Control extends Thread {
 						
 						// call some method to check local storage for username (e.g. checkUsername())
 						// if username is not known send LOCK_allowed and wait
-						
-						
 						break;
 					case "LOCK_DENIED":
 						// do something
@@ -403,6 +415,14 @@ public class Control extends Thread {
 		for (Connection c : connections) {
 			if (!c.equals(origin) && c.isServerAuthenticated()) {
 				c.writeMsg(serverAnnounceMessage.toJSONString());
+			}
+		}
+	}
+	
+	private void forwardClientRegistration(Connection origin, JSONObject clientRegistrationMessage) {
+		for (Connection c : connections) {
+			if (!c.equals(origin)) {
+				c.writeMsg(clientRegistrationMessage.toJSONString());
 			}
 		}
 	}
