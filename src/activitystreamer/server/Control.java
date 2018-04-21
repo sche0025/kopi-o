@@ -161,6 +161,7 @@ public class Control extends Thread {
 							return false;
 						}
 					case "LOGIN_SUCCESS":
+						// update Settings username and secret
 						String loginSuccessInfo = (String) newMessage.get("info");
 						log.info("LOGIN_SUCCESS: " + loginSuccessInfo);
 						return false;
@@ -174,8 +175,8 @@ public class Control extends Thread {
 						// close connection to the server
 						return true;
 					case "LOGOUT":
-						// do something
-						break;
+						// close connection to the client
+						return true;
 					case "ACTIVITY_MESSAGE":
 						// do something
 						break;
@@ -456,6 +457,21 @@ public class Control extends Thread {
 		
 		return false;
 	}
+	
+//	@SuppressWarnings("unchecked")
+//	private void redirectClientLogin(Connection c) {
+//		// Marshaling
+//		JSONObject loginMessage = new JSONObject();
+//		loginMessage.put("command", "LOGIN");
+//		loginMessage.put("username", Settings.getUsername());
+//		loginMessage.put("secret", Settings.getSecret());
+//		// write message to remote server as JSON object for authentication
+//		if (c.writeMsg(loginMessage.toJSONString())) {
+//			log.info("LOGIN: LOGIN message sent successfully");
+//		} else {
+//			log.info("LOGIN: LOGIN message sending failed");
+//		}
+//	}
 	
 	@SuppressWarnings("unchecked")
 	private void cilentLoginSuccess(Connection c, String username) {
