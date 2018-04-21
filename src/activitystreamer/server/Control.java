@@ -209,15 +209,15 @@ public class Control extends Thread {
 						// send lock_request to all other servers
 						
 						
-						String username = (String) newMessage.get("username");
+						String userName = (String) newMessage.get("username");
 						String userSecret = (String) newMessage.get("secret");
 						
 						JSONObject lockRequest = new JSONObject();
 						lockRequest.put("command", "LOCK_REQUEST");
-						lockRequest.put("username", username);
+						lockRequest.put("username", userName);
 						lockRequest.put("secret", userSecret);
 						
-						System.out.println(username);
+						System.out.println(userName);
 						
 						
 						break;
