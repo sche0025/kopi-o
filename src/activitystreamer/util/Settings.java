@@ -93,7 +93,6 @@ public class Settings {
 	public static void setServerId(String serverId) {
 		Settings.serverId = serverId;
 	}
-
 	
 	/*
 	 * some general helper functions
