@@ -41,7 +41,6 @@ public class Client {
 		CommandLine cmd = null;
 		try {
 			cmd = parser.parse( options, args);
-			log.info(Settings.getUsername());
 		} catch (ParseException e1) {
 			help(options);
 		}

@@ -15,7 +15,7 @@ public class Settings {
 	private static String remoteHostname = null;
 	private static int remotePort = 3780;
 	private static int activityInterval = 5000; // milliseconds
-	private static String secret = null;
+	private static String secret = nextSecret();
 	private static String username = "anonymous";
 	// added global variable(s)
 	private static String serverId = nextSecret();

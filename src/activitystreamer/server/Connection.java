@@ -26,7 +26,9 @@ public class Connection extends Thread {
 	private boolean term=false;
 	// added variable(s)
 	private boolean serverAuthenticated = false; // required for serverAnnounce to check if connecting servers have been authenticated before reading server announce message
-	private boolean loggedInClient = false;
+	private boolean loggedInClient = false; // to indicate that client has logged in; clients logged in are included in load count
+	private String clientUserName; 
+	private String clientSecret;
 	
 	Connection(Socket socket) throws IOException{
 		in = new DataInputStream(socket.getInputStream());
@@ -95,7 +97,7 @@ public class Connection extends Thread {
 	}
 	
 	public void setServerAuthenticated() {
-		serverAuthenticated = true;
+		this.serverAuthenticated = true;
 	}
 	
 	public boolean isClient() {
@@ -103,6 +105,23 @@ public class Connection extends Thread {
 	}
 	
 	public void setLoggedInClient() {
-		loggedInClient = true;
+		this.loggedInClient = true;
 	}
+	
+	public String getClientUserName() {
+		return clientUserName;
+	}
+
+	public void setClientUserName(String clientUserName) {
+		this.clientUserName = clientUserName;
+	}
+
+	public String getClientSecret() {
+		return clientSecret;
+	}
+
+	public void setClientSecret(String clientSecret) {
+		this.clientSecret = clientSecret;
+	}
+	
 }
