@@ -24,6 +24,7 @@ public class MessageListener extends Thread {
 	public void run() {
 		try {
 			String msg = null;
+			
 			//Read messages from the server while the end of the stream is not reached
 			while(!term && (msg = reader.readLine()) != null) {
 				//Print the messages to the console
